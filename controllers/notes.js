@@ -1,5 +1,17 @@
 const notesRouter = require("express").Router();
 const Note = require("../models/note");
+const {
+  TextCensor,
+  RegExpMatcher,
+  englishDataset,
+  englishRecommendedTransformers,
+} = require("obscenity");
+
+const matcher = new RegExpMatcher({
+  ...englishDataset.build(),
+  ...englishRecommendedTransformers,
+});
+const censor = new TextCensor();
 
 notesRouter.get("/", (request, response) => {
   Note.find({}).then((notes) => {
@@ -21,9 +33,10 @@ notesRouter.get("/:id", (request, response, next) => {
 
 notesRouter.post("/", (request, response, next) => {
   const body = request.body;
-
+  const matches = matcher.getAllMatches(body.content);
+  const cleanContent = censor.applyTo(body.content, matches);
   const note = new Note({
-    content: body.content,
+    content: cleanContent,
     important: body.important || false,
   });
 
